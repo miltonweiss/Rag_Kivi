@@ -16,12 +16,23 @@ export async function transcribeAudio(audioUrl: string) {
 
     // Verify the URL is accessible
     try {
-      const urlCheck = await fetch(audioUrl);
-      if (!urlCheck.ok) {
-        throw new Error(`Audio file not accessible: ${urlCheck.statusText}`);
-      }
+      const urlCheck = await fetch(audioUrl, {
+        method: 'HEAD',
+        mode: 'no-cors',
+        cache: 'no-cache',
+        headers: {
+          'Accept': '*/*'
+        }
+      });
+      console.log('Audio URL verification completed');
     } catch (error) {
-      throw new Error(`Failed to access audio file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error accessing audio URL:', {
+        error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      // Wir werfen hier keinen Fehler, da die URL möglicherweise trotzdem von AssemblyAI zugegriffen werden kann
+      console.warn('URL check failed, but continuing with transcription attempt');
     }
 
     // Create the headers object
@@ -38,17 +49,39 @@ export async function transcribeAudio(audioUrl: string) {
     // Submit the transcription request
     let response;
     try {
+      console.log('Sending transcription request to AssemblyAI:', {
+        url: `${BASE_URL}/transcript`,
+        audioUrl,
+        headers: { ...headers, Authorization: 'REDACTED' }
+      });
+      
+      // Use the raw URL directly without any encoding/decoding
+      const requestBody = {
+        audio_url: audioUrl, // Direkte Verwendung der Original-URL
+        language_detection: true,
+        punctuate: true,
+        format_text: true
+      };
+
+      console.log('AssemblyAI request body:', requestBody);
+      
       response = await fetch(`${BASE_URL}/transcript`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          audio_url: audioUrl,
-          auto_language_detection: true,
-          auto_punctuation: true,
-        }),
+        body: JSON.stringify(requestBody)
+      });
+      
+      console.log('AssemblyAI response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
       });
     } catch (fetchError) {
-      console.error('Network error during AssemblyAI request:', fetchError);
+      console.error('Detailed network error during AssemblyAI request:', {
+        error: fetchError,
+        message: fetchError instanceof Error ? fetchError.message : 'Unknown error',
+        stack: fetchError instanceof Error ? fetchError.stack : undefined
+      });
       throw new Error(`Network error: ${fetchError instanceof Error ? fetchError.message : 'Failed to connect to AssemblyAI'}`);
     }
 

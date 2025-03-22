@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import TextInput from "@/components/TextInput"
 import FileInput from "@/components/FileInput"
 import AudioInput from "@/components/AudioInput"
+import YoutubeInput from "@/components/YoutubeInput"
 
 export default function Home() {
   return (
@@ -39,10 +40,7 @@ export default function Home() {
 
             {/* YouTube Links Tab */}
             <TabsContent value="youtube" className="border rounded-md p-4 min-h-[600px]">
-              <textarea
-                className="w-full h-[600px] p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Enter YouTube links (one per line)..."
-              />
+              <YoutubeInput />
             </TabsContent>
 
             {/* Website Links Tab */}

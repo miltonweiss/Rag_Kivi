@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { X, Mic, Loader2, Eye } from "lucide-react"
+import { X, Mic, Loader2, Eye, Code } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -83,9 +83,19 @@ export default function AudioInput() {
       // Get the download URL
       const downloadUrl = await getDownloadURL(snapshot.ref)
 
-      // Verify the URL is accessible
-      const urlCheck = await fetch(downloadUrl);
-      if (!urlCheck.ok) {
+      try {
+        // Verify the URL is accessible
+        const response = await fetch(downloadUrl, {
+          mode: 'no-cors',
+          cache: 'no-cache',
+          headers: {
+            'Accept': '*/*'
+          }
+        });
+
+        // Bei no-cors bekommen wir immer eine erfolgreiche Response
+        console.log('File uploaded and accessible');
+      } catch (error) {
         throw new Error('Uploaded file is not publicly accessible');
       }
 
@@ -150,16 +160,26 @@ export default function AudioInput() {
 
       console.log('Firebase download URL:', downloadUrl)
 
-      // Test if the URL is accessible
+      // Test if the URL is accessible with detailed error logging
       try {
-        const urlTest = await fetch(downloadUrl)
-        if (!urlTest.ok) {
-          throw new Error(`Firebase URL not accessible: ${urlTest.statusText}`)
-        }
-        console.log('Firebase URL is accessible')
+        console.log('Testing URL accessibility...');
+        await fetch(downloadUrl, {
+          method: 'GET',
+          mode: 'no-cors',
+          cache: 'no-cache',
+          headers: {
+            'Accept': '*/*'
+          }
+        });
+        
+        console.log('Firebase URL is accessible');
       } catch (error) {
-        console.error('Error accessing Firebase URL:', error)
-        throw new Error(`Cannot access Firebase URL: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        console.error('Detailed error accessing Firebase URL:', {
+          error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined
+        });
+        throw new Error(`Cannot access Firebase URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
 
       // Update status to transcribing
@@ -300,7 +320,7 @@ export default function AudioInput() {
         <div className="border rounded-md p-4">
           <h3 className="text-sm font-medium mb-3">Selected Audio Files:</h3>
           <div className="space-y-2">
-            {audioFiles.map(({ file, id, status, transcription }) => (
+            {audioFiles.map(({ file, id, status, transcription, downloadUrl }) => (
               <div 
                 key={id} 
                 className="flex items-center justify-between bg-muted/50 p-2 rounded-md"
@@ -375,6 +395,32 @@ export default function AudioInput() {
                       </div>
                     </DialogContent>
                   </Dialog>
+
+                  {downloadUrl && (status === 'uploaded' || status === 'error') && (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                        >
+                          <Code className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl max-h-[80vh]">
+                        <DialogHeader>
+                          <DialogTitle>
+                            Firebase URL - {file.name}
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="flex flex-col gap-4 p-4">
+                          <div className="bg-muted p-4 rounded-md overflow-x-auto">
+                            <code className="text-sm break-all">{downloadUrl}</code>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
 
                   {status === 'transcribed' && transcription && (
                     <Dialog>

@@ -8,6 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import mammoth from 'mammoth'
 
 // Add PDF.js types
 declare global {
@@ -86,6 +87,27 @@ export default function FileInput() {
     }
   }
 
+  const extractTextFromTXT = async (file: File): Promise<string> => {
+    try {
+      const text = await file.text()
+      return text
+    } catch (error) {
+      console.error('Error extracting text from TXT:', error)
+      return ''
+    }
+  }
+
+  const extractTextFromDOCX = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      const result = await mammoth.extractRawText({ arrayBuffer })
+      return result.value
+    } catch (error) {
+      console.error('Error extracting text from DOCX:', error)
+      return ''
+    }
+  }
+
   const processFiles = async (newFiles: File[]) => {
     const validFiles = newFiles.filter(file => 
       file.name.endsWith('.txt') || 
@@ -101,11 +123,18 @@ export default function FileInput() {
             id: Math.random().toString(36).substring(7),
           }
 
+          let rawText = ''
           if (file.name.endsWith('.pdf')) {
-            const rawText = await extractTextFromPDF(file)
+            rawText = await extractTextFromPDF(file)
+          } else if (file.name.endsWith('.txt')) {
+            rawText = await extractTextFromTXT(file)
+          } else if (file.name.endsWith('.docx')) {
+            rawText = await extractTextFromDOCX(file)
+          }
+
+          if (rawText) {
             fileItem.rawText = rawText
             fileItem.processedText = processText(rawText)
-            // Calculate word count from raw text
             fileItem.wordCount = rawText.split(/\s+/).filter(word => word.length > 0).length
           }
 
